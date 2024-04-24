@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: ['8','11','17', '21']
+        java: ['17','21']
 
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,6 @@ jobs:
     permissions:
       contents: write
       packages: write
-    if: github.ref == 'refs/heads/main'
     steps:
       - name: Step 1 - Checkout code
         uses: actions/checkout@v4
@@ -48,7 +47,7 @@ jobs:
           distribution: temurin
           java-version: 17
           cache: maven
-          server-id: maven
+          server-id: central
           server-username: MAVEN_USERNAME # env variable for username in deploy
           server-password: MAVEN_CENTRAL_TOKEN # env variable for token in deploy
           gpg-passphrase: MAVEN_GPG_PASSPHRASE # env variable for GPG private key passphrase
@@ -59,8 +58,9 @@ jobs:
           scheme: semver
           increment: patch
       - name: Step 5 - Prepare and perform release
-        run: mvn -B deploy -Drevision=${{ steps.version.outputs.version }}
+        run: mvn -B deploy --no-transfer-progress -e -Prelease -Drevision=${{ steps.version.outputs.version }} -s settings.xml
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+          GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}

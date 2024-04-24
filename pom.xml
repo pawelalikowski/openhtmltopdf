@@ -146,6 +146,16 @@
               </execution>
             </executions>
           </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.4.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <tokenAuth>true</tokenAuth>
+            </configuration>
+          </plugin>
         </plugins>
       </build>
     </profile>
@@ -244,6 +254,7 @@
         <executions>
           <execution>
             <id>attach-javadocs</id>
+            <phase>package</phase>
             <goals>
               <goal>jar</goal>
             </goals>
@@ -262,6 +273,7 @@
         <artifactId>flatten-maven-plugin</artifactId>
         <version>1.6.0</version>
         <configuration>
+          <flattenMode>minimum</flattenMode>
         </configuration>
         <executions>
           <execution>
