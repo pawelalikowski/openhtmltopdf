@@ -274,6 +274,7 @@
         <version>1.6.0</version>
         <configuration>
           <flattenMode>ossrh</flattenMode>
+          <updatePomFile>true</updatePomFile>
         </configuration>
         <executions>
           <execution>
