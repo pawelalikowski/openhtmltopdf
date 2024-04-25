@@ -60,3 +60,20 @@ jobs:
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
           GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      - name: Step 6 - Upload artifact to GitHub Package Registry
+        run: mvn -B deploy -Dgithub-release -Drevision=${{ steps.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Step 7 - Push Git tag for the new release
+        uses: rickstaa/action-create-tag@v1
+        id: "tag_create"
+        with:
+          tag: "latest"
+          tag_exists_error: false
+      - name: Step 8 - Create GitHub release
+        id: create_release
+        uses: elgohr/Github-Release-Action@v5
+        with:
+          title: openhtmltopdf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
