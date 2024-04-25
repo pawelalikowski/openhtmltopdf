@@ -68,7 +68,7 @@ jobs:
         uses: rickstaa/action-create-tag@v1
         id: "tag_create"
         with:
-          tag: "latest"
+          tag: ${{ steps.version.outputs.version }}
           tag_exists_error: false
       - name: Step 8 - Create GitHub release
         id: create_release
