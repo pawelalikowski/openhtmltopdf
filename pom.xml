@@ -17,7 +17,7 @@
   <licenses>
     <license>
       <name>GNU Lesser General Public License (LGPL), version 2.1 or later</name>
-      <url>http://www.gnu.org/licenses/lgpl.html</url>
+      <url>https://www.gnu.org/licenses/lgpl.html</url>
     </license>
   </licenses>
 
@@ -109,15 +109,6 @@
           <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2</url>
         </repository>
       </distributionManagement>
-    </profile>
-    <profile>
-      <id>doclint-java8-disable</id>
-      <activation>
-        <jdk>[1.8,)</jdk>
-      </activation>
-      <properties>
-        <javadoc.opts>-Xdoclint:none</javadoc.opts>
-      </properties>
     </profile>
 
     <profile>
@@ -255,7 +246,6 @@
         <configuration>
           <source>8</source>
           <doclint>none</doclint>
-          <additionalparam>${javadoc.opts}</additionalparam>
         </configuration>
         <executions>
           <execution>
