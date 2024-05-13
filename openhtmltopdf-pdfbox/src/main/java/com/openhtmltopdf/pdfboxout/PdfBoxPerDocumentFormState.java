@@ -56,7 +56,7 @@ public class PdfBoxPerDocumentFormState {
     private PDAppearanceStream checkboxOffAppearance;
     private PDAppearanceStream radioBoxOffAppearance;
     private PDAppearanceStream radioBoxOnAppearance;
-
+private PDAppearanceStream signatureAppearance;
     // The ZapfDingbats font resource needed by checkbox and radio box appearance streams.
     private PDResources checkBoxFontResource;
 
@@ -75,7 +75,9 @@ public class PdfBoxPerDocumentFormState {
     public PDAppearanceStream getRadioOnStream() {
         return this.radioBoxOnAppearance;
     }
-
+public PDAppearanceStream getSignatureStream() {
+        return this.signatureAppearance;
+    }
     /**
      * Adds a form to a map to be used later by <code>processControls</code>.
      */
@@ -96,8 +98,8 @@ public class PdfBoxPerDocumentFormState {
         }
     }
 
-    private String getControlFont(SharedContext sharedContext, PdfBoxForm.Control ctrl) {
-        PDFont fnt = ((PdfBoxFSFont) sharedContext.getFont(ctrl.box.getStyle().getFontSpecification())).getFontDescription().get(0).getFont();
+    private String getControlFont(SharedContext sharedContext, PdfBoxForm.Control ctrl, RenderingContext renderingContext) {
+        PDFont fnt = ((PdfBoxFSFont) sharedContext.getFont(ctrl.box.getStyle().getFont(renderingContext))).getFontDescription().get(0).getFont();
         String fontName;
 
         if (!controlFonts.containsKey(fnt)) {
@@ -108,6 +110,11 @@ public class PdfBoxPerDocumentFormState {
         }
 
         return fontName;
+    }
+private void createSignatureAppearanceStreams(PDDocument writer) {
+
+        // this appearance is just a dummy to make the validation happy
+        signatureAppearance = PdfBoxForm.createCheckboxAppearance("q\nQ\n", writer, checkBoxFontResource);
     }
 
     private void createCheckboxAppearanceStreams(PDDocument writer, PdfBoxForm.Control ctrl) {
@@ -140,14 +147,16 @@ public class PdfBoxPerDocumentFormState {
         }
     }
 
-    public void processControls(SharedContext sharedContext, PDDocument writer, Box root) {
+    public void processControls(SharedContext sharedContext, PDDocument writer, Box root, RenderingContext renderingContext) {
         for (PdfBoxForm.Control ctrl : controls) {
             PdfBoxForm frm = findEnclosingForm(ctrl.box.getElement());
             String fontName = null;
 
-            if (!ArrayUtil.isOneOf(ctrl.box.getElement().getAttribute("type"), "checkbox", "radio", "hidden")) {
+            if (ctrl.box.getElement().getAttribute("type").equals("text") && ctrl.box.getElement().getAttribute("class").contains("signature")) {
+                createSignatureAppearanceStreams(writer);
+            } else if (!ArrayUtil.isOneOf(ctrl.box.getElement().getAttribute("type"), "checkbox", "radio", "hidden")) {
                 // Need to embed a font for every control other than checkbox, radio and hidden.
-                fontName = getControlFont(sharedContext, ctrl);
+                fontName = getControlFont(sharedContext, ctrl, renderingContext);
             } else if (ctrl.box.getElement().getAttribute("type").equals("checkbox")) {
                 createCheckboxFontResource();
                 createCheckboxAppearanceStreams(writer, ctrl);
