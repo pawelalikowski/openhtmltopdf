@@ -22,18 +22,11 @@ package com.openhtmltopdf.pdfboxout;
 import com.openhtmltopdf.pdfboxout.PdfBoxFontResolver.FontDescription;
 
 public class PdfBoxUtil {
-	
-	private PdfBoxUtil() {
-	}
-	
-    public static class FontRun {
-        String str;
-        FontDescription des;
-        int spaceCharacterCount;
-        int otherCharacterCount;
+
+    private PdfBoxUtil() {
     }
-	
-    /** 
+
+    /**
      * Class for storing metadata element name/content pairs from the head
      * section of an xhtml document.
      */
@@ -62,5 +55,5 @@ public class PdfBoxUtil {
             _name = name;
         }
     }
-    
+
 }
