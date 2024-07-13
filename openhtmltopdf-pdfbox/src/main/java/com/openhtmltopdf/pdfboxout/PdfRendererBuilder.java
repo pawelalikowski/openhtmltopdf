@@ -4,6 +4,7 @@ import com.openhtmltopdf.css.constants.IdentValue;
 import com.openhtmltopdf.extend.FSCacheEx;
 import com.openhtmltopdf.extend.FSCacheValue;
 import com.openhtmltopdf.extend.FSSupplier;
+import com.openhtmltopdf.extend.Hyphenator;
 import com.openhtmltopdf.extend.impl.FSNoOpCacheStore;
 import com.openhtmltopdf.outputdevice.helper.*;
 import com.openhtmltopdf.pdfboxout.PdfBoxFontResolver.FontGroup;
@@ -256,6 +257,15 @@ public class PdfRendererBuilder extends BaseRendererBuilder<PdfRendererBuilder, 
         state._producer = producer;
         return this;
     }
+
+    /**
+	  * Provide a custom auto-hyphenator, that will be used, if the 'hyphens' is being used in css
+	  * @param hyphenator custom hyphenator, that should be used
+	  */
+	  public PdfRendererBuilder useHyphenation(Hyphenator hyphenator) {
+		  state._hyphenator = hyphenator;
+		  return this;
+	  }
 
     /**
      * List of caches available.
