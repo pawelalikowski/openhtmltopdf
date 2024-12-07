@@ -986,6 +986,22 @@ public class VisualRegressionTest {
     }
 
     /**
+     * Check custom marker content is rendered
+     */
+    @Test
+    public void testCustomMarkerContent() throws IOException {
+        assertTrue(vt.runTest("custom-marker-content"));
+    }
+
+    /**
+     * Check calculated marker content is rendered
+     */
+    @Test
+    public void testCalculatedMarkerContent() throws IOException {
+        assertTrue(vt.runTest("calculated-marker-content"));
+    }
+
+    /**
      * Check the added elements are considered as block by default.
      *
      * See issue: https://github.com/danfickle/openhtmltopdf/issues/382

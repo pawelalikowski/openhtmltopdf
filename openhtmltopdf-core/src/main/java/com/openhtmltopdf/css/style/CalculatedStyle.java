@@ -1305,6 +1305,11 @@ public class CalculatedStyle {
                         isIdent(CSSName.WHITE_SPACE, IdentValue.PRE_LINE));
     }
 
+    public IdentValue getTextAlign() {
+        return getIdent(CSSName.TEXT_ALIGN);
+    }
+
+
     public boolean isListMarkerInside() {
         return isIdent(CSSName.LIST_STYLE_POSITION, IdentValue.INSIDE);
     }
@@ -1338,6 +1343,8 @@ public class CalculatedStyle {
     }
 
 	public IdentValue getDirection() {
+        // note: if a 'dir' attribute is used on an HTML element, this method will return IdentValue.AUTO for it,
+        // even though 'auto' is not a permitted value for the 'direction' CSS property.
 		return getIdent(CSSName.DIRECTION);
 	}
 	

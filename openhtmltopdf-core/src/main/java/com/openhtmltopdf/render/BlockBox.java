@@ -22,10 +22,12 @@ package com.openhtmltopdf.render;
 
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.openhtmltopdf.layout.BoxBuilder.ChildBoxInfo;
 import org.w3c.dom.Element;
 
 import com.openhtmltopdf.css.constants.CSSName;
@@ -54,6 +56,9 @@ import com.openhtmltopdf.layout.Styleable;
 import com.openhtmltopdf.newtable.TableRowBox;
 import com.openhtmltopdf.util.ThreadCtx;
 
+import static com.openhtmltopdf.layout.BoxBuilder.*;
+
+
 /**
  * A block box as defined in the CSS spec.  It also provides a base class for
  * other kinds of block content (for example table rows or cells).
@@ -72,7 +77,7 @@ public class BlockBox extends Box {
      * If this constraint is not met by the original document, the {@link BoxBuilder}
      * will insert {@link AnonymousBlockBox} with inline content.
      */
-    public static enum ContentType {
+    public enum ContentType {
         /**
          * The box builder has not yet run to
          * create our child boxes. The box builder can be run
@@ -99,7 +104,7 @@ public class BlockBox extends Box {
         /**
          * This block box is empty but may still have border, etc.
          */
-        EMPTY;
+        EMPTY
     }
 
     protected static final int NO_BASELINE = Integer.MIN_VALUE;
@@ -129,7 +134,7 @@ public class BlockBox extends Box {
     private boolean _minMaxCalculated;
 
     private boolean _dimensionsCalculated;
-    private boolean _needShrinkToFitCalculatation;
+    private boolean _needShrinkToFitCalculation;
 
     private CascadedStyle _firstLineStyle;
     private CascadedStyle _firstLetterStyle;
@@ -203,8 +208,6 @@ public class BlockBox extends Box {
                 result.append('E');
                 break;
             case UNKNOWN:
-                result.append('U');
-                break;
             default:
                 result.append('U');
                 break;
@@ -277,9 +280,7 @@ public class BlockBox extends Box {
                 break;
 
             case EMPTY:
-                break;
             case UNKNOWN:
-                break;
             default:
                 break;
         }
@@ -343,8 +344,7 @@ public class BlockBox extends Box {
     }
 
     public void createMarkerData(LayoutContext c) {
-        if (getMarkerData() != null)
-        {
+        if (getMarkerData() != null) {
             return;
         }
 
@@ -364,7 +364,11 @@ public class BlockBox extends Box {
             imageMarker = result.getImageMarker() != null;
         }
 
-        if (listStyle != IdentValue.NONE && ! imageMarker) {
+        CascadedStyle markerStyle = c.getCss().getPseudoElementStyle(_element,IdentValue.MARKER.toString());
+
+        if (markerStyle != null && markerStyle.hasProperty(CSSName.CONTENT)) {
+            result.setTextMarker(makeTextMarker(c, markerStyle));
+        } else if (listStyle != IdentValue.NONE && ! imageMarker) {
             if (listStyle == IdentValue.CIRCLE || listStyle == IdentValue.SQUARE ||
                     listStyle == IdentValue.DISC) {
                 result.setGlyphMarker(makeGlyphMarker(strutMetrics));
@@ -389,13 +393,12 @@ public class BlockBox extends Box {
 
     private MarkerData.ImageMarker makeImageMarker(
             LayoutContext c, StrutMetrics structMetrics, String image) {
-        FSImage img = null;
+        FSImage img;
         if (! image.equals("none")) {
             img = c.getUac().getImageResource(image).getImage();
             if (img != null) {
-                StrutMetrics strutMetrics = structMetrics;
-                if (img.getHeight() > strutMetrics.getAscent()) {
-                    img.scale(-1, (int) strutMetrics.getAscent());
+                if (img.getHeight() > structMetrics.getAscent()) {
+                    img.scale(-1, (int) structMetrics.getAscent());
                 }
                 MarkerData.ImageMarker result = new MarkerData.ImageMarker();
                 result.setImage(img);
@@ -428,6 +431,75 @@ public class BlockBox extends Box {
 
         MarkerData.TextMarker result = new MarkerData.TextMarker();
 
+        result.setAlignment(IdentValue.END);
+        result.setLayoutWidth(w);
+        result.setText(text);
+
+        return result;
+    }
+
+    private MarkerData.TextMarker makeTextMarker(LayoutContext c, CascadedStyle markerStyle) {
+        IdentValue listDirection = getParent().getStyle().getDirection();
+        IdentValue alignment;
+
+        // coalesce to flow-relative values, for ListItemPainter to use
+        if (listDirection == IdentValue.RTL) {
+            if (getStyle().deriveStyle(markerStyle).getTextAlign() == IdentValue.LEFT) {
+                alignment = IdentValue.END;
+            } else {
+                alignment = IdentValue.START;
+            }
+        } else {
+            if (getStyle().deriveStyle(markerStyle).getTextAlign() == IdentValue.RIGHT) {
+                alignment = IdentValue.END;
+            } else {
+                alignment = IdentValue.START;
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        if (listDirection == IdentValue.RTL) {
+            // Ensure some whitespace padding
+            sb.append("  ");
+        }
+
+        // Generate marker content as a sequence of 'throwaway' boxes and then extract their text.
+        // It's fairly dislikeable, but less invasive than extracting the text generation elements
+        // from the insertGeneratedContent() method chain.
+        List<Styleable> markerBoxes = new ArrayList<>();
+        ChildBoxInfo info = new ChildBoxInfo();
+        insertGeneratedContent(c, _element, getStyle().getParent(), IdentValue.MARKER.toString(), markerBoxes, info);
+        for (Styleable box : markerBoxes) {
+            CalculatedStyle style = box.getStyle();
+            if (style.isInline()) {
+                sb.append(((InlineBox) box).getText());
+            } else if (style.isBlockEquivalent()) {
+                for (Styleable ib : ((BlockBox) box).getInlineContent()) {
+                    if (ib.getStyle().isInline()) {
+                        sb.append(((InlineBox) ib).getText());
+                    }
+                }
+            }
+        }
+
+        if (listDirection == IdentValue.LTR) {
+            // Ensure some whitespace padding
+            sb.append("  ");
+        }
+
+        String text = sb.toString();
+
+        int w = c.getTextRenderer().getWidth(
+                c.getFontContext(),
+                getStyle().getFSFont(c),
+                text);
+
+        MarkerData.TextMarker result = new MarkerData.TextMarker();
+
+        if (alignment != null) {
+            result.setAlignment(alignment);
+        }
         result.setLayoutWidth(w);
         result.setText(text);
 
@@ -538,7 +610,7 @@ public class BlockBox extends Box {
     public void positionAbsolute(CssContext cssCtx, int direction) {
         CalculatedStyle style = getStyle();
 
-        Rectangle boundingBox = null;
+        Rectangle boundingBox;
 
         int cbContentHeight = getContainingBlock().getContentAreaEdge(0, 0, cssCtx).height;
 
@@ -569,7 +641,7 @@ public class BlockBox extends Box {
             }
 
             // Can't do this before now because our containing block
-            // must be completed layed out
+            // must be completely laid out
             int pinnedHeight = calcPinnedHeight(cssCtx);
             if (pinnedHeight != -1 && getCSSHeight(cssCtx) == -1) {
                 setHeight(pinnedHeight);
@@ -663,7 +735,7 @@ public class BlockBox extends Box {
                     CSSName.RIGHT, paddingEdge.width, c);
 
             int result = paddingEdge.width - left - right - getLeftMBP() - getRightMBP();
-            return result < 0 ? 0 : result;
+            return Math.max(result, 0);
         }
 
         return -1;
@@ -681,7 +753,7 @@ public class BlockBox extends Box {
 
 
             int result = paddingEdge.height - top - bottom;
-            return result < 0 ? 0 : result;
+            return Math.max(result, 0);
         }
 
         return -1;
@@ -967,7 +1039,7 @@ public class BlockBox extends Box {
 
                 } else if (cssWidth == -1 && pinnedContentWidth == -1 &&
                         style.isCanBeShrunkToFit()) {
-                    setNeedShrinkToFitCalculatation(true);
+                    setNeedShrinkToFitCalculation(true);
                 }
 
                 if (! isReplaced()) {
@@ -1132,7 +1204,7 @@ public class BlockBox extends Box {
             c.pushLayer(this);
             return true;
         } else if (style.requiresLayer()) {
-            // FIXME: HACK. Some boxes can be layed out many times (to satisfy page constraints for example).
+            // FIXME: HACK. Some boxes can be laid out many times (to satisfy page constraints for example).
             // If this happens we just mark our old layer for deletion and create a new layer.
             // Not sure this is right, but doesn't break any correct tests.
             //
@@ -1192,10 +1264,10 @@ public class BlockBox extends Box {
 
 
     private void calcShrinkToFitWidthIfNeeded(LayoutContext c) {
-        if (isNeedShrinkToFitCalculatation()) {
+        if (isNeedShrinkToFitCalculation()) {
             setContentWidth(calcShrinkToFitWidth(c) - getLeftMBP() - getRightMBP());
             applyCSSMinMaxWidth(c);
-            setNeedShrinkToFitCalculatation(false);
+            setNeedShrinkToFitCalculation(false);
         }
     }
 
@@ -1315,9 +1387,9 @@ public class BlockBox extends Box {
 
     /**
      * TERMINOLOGY:
-     * Orphans refers to the number of lines of content in this
+     * Orphans refer to the number of lines of content in this
      * box before the first page break.
-     * Widows refers to the number of lines of content on the last page.
+     * Widows refer to the number of lines of content on the last page.
      * <br><br>
      * METHOD AIM:
      * This method aims (but can not guarantee) to satisfy the <code>orphans</code> and
@@ -1452,7 +1524,7 @@ public class BlockBox extends Box {
      * as inline-block and inline-table.
      * <br><br>
      * During layout inline-content is laid out into lines and so on but
-     * the inline content is left untouched so as to be able to run layout
+     * the inline content is left untouched to be able to run layout
      * multiple times to satisfy constraints.
      * <br><br>
      * This method should be called with {@link #setChildrenContentType(ContentType)} set
@@ -1944,11 +2016,7 @@ public class BlockBox extends Box {
                     (int) margin.left() + (int) border.left() + (int) padding.left() +
                             (int) margin.right() + (int) border.right() + (int) padding.right();
             if (_maxWidth > cssMaxWidth) {
-                if (cssMaxWidth > _minWidth) {
-                    _maxWidth = cssMaxWidth;
-                } else {
-                    _maxWidth = _minWidth;
-                }
+                _maxWidth = Math.max(cssMaxWidth, _minWidth);
             }
         }
     }
@@ -2119,7 +2187,7 @@ public class BlockBox extends Box {
                     InlineBox iB = (InlineBox) child;
 
                     if (iB.isStartsHere()) {
-                        CascadedStyle cs = null;
+                        CascadedStyle cs;
                         if (iB.getElement() != null) {
                             if (iB.getPseudoElementOrClass() == null) {
                                 cs = c.getCss().getCascadedStyle(iB.getElement(), false);
@@ -2194,12 +2262,12 @@ public class BlockBox extends Box {
         return _dimensionsCalculated;
     }
 
-    protected void setNeedShrinkToFitCalculatation(boolean needShrinkToFitCalculatation) {
-        _needShrinkToFitCalculatation = needShrinkToFitCalculatation;
+    protected void setNeedShrinkToFitCalculation(boolean needShrinkToFitCalculation) {
+        _needShrinkToFitCalculation = needShrinkToFitCalculation;
     }
 
-    private boolean isNeedShrinkToFitCalculatation() {
-        return _needShrinkToFitCalculatation;
+    private boolean isNeedShrinkToFitCalculation() {
+        return _needShrinkToFitCalculation;
     }
 
     public void initStaticPos(LayoutContext c, BlockBox parent, int childOffset) {
@@ -2514,7 +2582,7 @@ public class BlockBox extends Box {
         } else if (_childrenContentType == BlockBox.ContentType.BLOCK) {
             for (Box box : getChildren()) {
                 if (box instanceof BlockBox) {
-                    ((BlockBox) box).collectLayoutText(c, builder);
+                    box.collectLayoutText(c, builder);
                 }
             }
         }

@@ -47,6 +47,7 @@ public class CSSParser {
         SUPPORTED_PSEUDO_ELEMENTS.add("first-letter");
         SUPPORTED_PSEUDO_ELEMENTS.add("before");
         SUPPORTED_PSEUDO_ELEMENTS.add("after");
+        SUPPORTED_PSEUDO_ELEMENTS.add("marker");
 
         SUPPORTED_PSEUDO_ELEMENTS.add("footnote-call");
         SUPPORTED_PSEUDO_ELEMENTS.add("footnote-marker");
@@ -1166,6 +1167,8 @@ public class CSSParser {
             selector.setPseudoClass(Selector.HOVER_PSEUDOCLASS);
         } else if (value.equals("focus")) {
             selector.setPseudoClass(Selector.FOCUS_PSEUDOCLASS);
+        } else if (value.equals("marker")) {
+            selector.setPseudoClass(Selector.MARKER_PSEUDOCLASS);
         } else if (value.equals("active")) {
             selector.setPseudoClass(Selector.ACTIVE_PSEUDOCLASS);
         } else if (value.equals("first-child")) {
